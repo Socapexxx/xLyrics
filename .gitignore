@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Claude Code
+.claude/
+
+# Runtime config — user-specific, not for distribution
+config.json
+
+# User data — your songs and playlists stay local. The server recreates
+# these folders on first run.
+songs/
+playlists/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log

@@ -1,0 +1,91 @@
+<!--
+  Stage — real stage display. Big centred text, live clock in the top right,
+  section + song title in the top left. Designed for a monitor in a
+  musician's eyeline.
+-->
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; cursor: none; }
+  body {
+    background: #050505;
+    color: #fff;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 36px 48px;
+    box-sizing: border-box;
+  }
+  .xl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #8a8a8a;
+  }
+  .xl-header .left { display: flex; gap: 18px; align-items: baseline; }
+  .xl-header [data-xl="song_title"] { color: #ccc; letter-spacing: 0.08em; text-transform: none; }
+  .xl-header [data-xl="section"]:not(:empty)::before { content: '· '; color: #555; }
+  .xl-clock {
+    font-variant-numeric: tabular-nums;
+    font-size: 28px;
+    color: #e0e0e0;
+    letter-spacing: 0.05em;
+  }
+  .xl-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  [data-xl="current"] {
+    font-size: 110px;
+    line-height: 1.15;
+    white-space: pre-line;
+    max-width: 95%;
+    opacity: 0;
+    transition: opacity 300ms ease-in-out;
+  }
+  .xl-footer {
+    font-size: 20px;
+    color: #555;
+    text-align: center;
+    white-space: pre-line;
+    min-height: 1.4em;
+  }
+  .xl-footer-label {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #3a3a3a;
+    margin-right: 10px;
+  }
+</style>
+<div class="xl-header">
+  <div class="left">
+    <span data-xl-slot="song_title">{{song_title}}</span>
+    <span data-xl-slot="section">{{section}}</span>
+  </div>
+  <div class="xl-clock" id="xl-clock">--:--</div>
+</div>
+<div class="xl-stage">
+  <div data-xl-slot="current">{{current}}</div>
+</div>
+<div class="xl-footer">
+  <span class="xl-footer-label">Next</span><span data-xl-slot="next">{{next}}</span>
+</div>
+<script>
+  (function () {
+    const el = document.getElementById('xl-clock');
+    if (!el) return;
+    function tick() {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      el.textContent = hh + ':' + mm;
+    }
+    tick();
+    setInterval(tick, 15000);
+  })();
+</script>

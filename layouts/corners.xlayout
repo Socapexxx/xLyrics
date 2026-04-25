@@ -1,0 +1,51 @@
+<!--
+  Corners — modern, text with bracket corners.
+-->
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; cursor: none; }
+  body {
+    background: #000;
+    color: #fff;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 80px;
+    box-sizing: border-box;
+  }
+  .xl-frame {
+    position: relative;
+    padding: 56px 80px;
+    max-width: 80%;
+    text-align: center;
+  }
+  .xl-frame::before,
+  .xl-frame::after,
+  .xl-frame > .corner-bl,
+  .xl-frame > .corner-br {
+    content: '';
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    border-color: #fff;
+    border-style: solid;
+    border-width: 0;
+  }
+  .xl-frame::before { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; }
+  .xl-frame::after  { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; }
+  .xl-frame > .corner-bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; }
+  .xl-frame > .corner-br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; }
+  [data-xl="current"] {
+    font-size: 56px;
+    line-height: 1.3;
+    white-space: pre-line;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    transition: opacity 300ms ease-in-out;
+  }
+</style>
+<div class="xl-frame">
+  <span data-xl-slot="current">{{current}}</span>
+  <span class="corner-bl"></span>
+  <span class="corner-br"></span>
+</div>

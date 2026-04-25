@@ -1,0 +1,37 @@
+<!--
+  Chroma — chroma-key green background with a black bar behind each line of
+  text, padded around the text so wrapped/multi-line lyrics each get their
+  own pill. Key out pure green (#00ff00) in your switcher.
+-->
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; cursor: none; }
+  body {
+    background: #00ff00;
+    color: #fff;
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 80px;
+    box-sizing: border-box;
+  }
+  .xl-wrap {
+    text-align: center;
+    max-width: 85%;
+    font-size: 56px;
+    line-height: 1.75;
+    white-space: pre-line;
+    opacity: 1;
+  }
+  [data-xl="current"] {
+    display: inline;
+    background: #000;
+    color: #fff;
+    padding: 8px 24px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+    opacity: 0;
+    transition: opacity 300ms ease-in-out;
+  }
+</style>
+<div class="xl-wrap"><span data-xl-slot="current">{{current}}</span></div>

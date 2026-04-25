@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>xLyrics Control</title>
+  <link rel="icon" type="image/png" href="/images/xlyrics-favicon.png" />
+  <link rel="stylesheet" href="/control.css" />
+  <script>
+    // Apply saved theme before paint to avoid a flash.
+    (function () {
+      try {
+        const t = localStorage.getItem('xlyrics.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch {}
+    })();
+  </script>
+</head>
+<body>
+  <header>
+    <img id="header-logo" class="header-logo" src="/images/Text Dark Tsp.png" alt="xLyrics" />
+    <span class="spacer"></span>
+    <button id="btn-theme" class="icon-btn" aria-label="Toggle light/dark mode" title="Toggle theme">&#9728;</button>
+    <button id="btn-settings" class="header-btn" aria-label="Open settings">Settings</button>
+    <span id="output-links"></span>
+  </header>
+  <main>
+    <section class="pane songs-pane">
+      <div class="tab-bar">
+        <button class="tab active" data-tab="browser">Browser</button>
+        <button class="tab" data-tab="playlist">Playlist</button>
+      </div>
+
+      <div class="tab-content" data-tab="browser">
+        <div class="pane-tools">
+          <select id="browser-sort">
+            <option value="all">All songs</option>
+            <option value="artist">By artist</option>
+            <option value="folder">By folder</option>
+          </select>
+        </div>
+        <input type="text" id="song-search" placeholder="Search…" />
+        <ul id="songs-list" class="song-list"></ul>
+      </div>
+
+      <div class="tab-content hidden" data-tab="playlist">
+        <div class="pane-tools">
+          <select id="playlist-select">
+            <option value="">— No playlist —</option>
+          </select>
+          <button id="playlist-new" title="New playlist" aria-label="New playlist">+</button>
+        </div>
+        <input type="text" id="playlist-search" placeholder="Search…" />
+        <ul id="playlist-songs-list" class="song-list"></ul>
+      </div>
+    </section>
+
+    <section class="pane structure-pane">
+      <div class="arrangement-bar" id="arrangement-bar">
+        <button class="arrangement-selector" id="arrangement-selector">
+          <span id="arrangement-name">Default</span>
+          <span id="dirty-indicator" class="dirty-indicator hidden">&#9679;</span>
+          <span class="chevron">&#9662;</span>
+        </button>
+        <div class="arrangement-chips" id="arrangement-chips"></div>
+        <button class="arrangement-expand" id="arrangement-expand" title="Toggle wrap" aria-label="Toggle arrangement wrap">&#8597;</button>
+      </div>
+      <div id="structure-list" class="structure-list"></div>
+    </section>
+
+    <div id="splitter" title="Drag to resize"></div>
+
+    <aside class="side-pane">
+      <div id="side-previews" class="side-previews"></div>
+      <div class="settings-block">
+        <h2>Settings</h2>
+        <div class="setting-row">
+          <label for="fade-slider">Fade</label>
+          <input type="range" id="fade-slider" min="0" max="2000" value="0" step="50" />
+          <input type="number" id="fade-value" min="0" max="2000" value="0" step="50" />
+          <span class="muted">ms</span>
+        </div>
+        <div class="setting-row">
+          <label for="tile-size-slider">Tile size</label>
+          <input type="range" id="tile-size-slider" min="10" max="32" value="14" step="1" />
+          <input type="number" id="tile-size-value" min="10" max="32" value="14" step="1" />
+          <span class="muted">px</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+  <footer>
+    <button id="btn-clear">Clear</button>
+    <button id="btn-prev">&#9664; Prev</button>
+    <button id="btn-next">Next &#9654;</button>
+    <button id="btn-home">Home</button>
+    <span id="status-bar" role="status" aria-live="polite">No song loaded</span>
+  </footer>
+
+  <!-- Settings modal -->
+  <div class="modal-overlay hidden" id="settings-modal">
+    <div class="modal" role="dialog" aria-label="Settings">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" id="settings-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-mtab="sections">Sections</button>
+        <button class="modal-tab" data-mtab="outputs">Outputs</button>
+        <button class="modal-tab" data-mtab="layouts">Layouts</button>
+        <button class="modal-tab" data-mtab="resolume">Resolume</button>
+        <button class="modal-tab" data-mtab="network">Network</button>
+        <button class="modal-tab" data-mtab="about">About</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tab-content" data-mtab="sections">
+          <div class="sections-table-wrap">
+            <table class="sections-table">
+              <thead>
+                <tr>
+                  <th>Section name</th>
+                  <th>Colour</th>
+                  <th>Hotkey</th>
+                  <th>OSC trigger</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="sections-tbody"></tbody>
+            </table>
+          </div>
+          <div class="modal-actions">
+            <button id="section-add">Add section</button>
+            <span class="spacer"></span>
+            <button id="sections-save" class="primary">Save</button>
+          </div>
+        </div>
+
+        <div class="modal-tab-content hidden" data-mtab="outputs">
+          <div class="outputs-table-wrap">
+            <table class="outputs-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>URL path</th>
+                  <th>Layout</th>
+                  <th>Open</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="outputs-tbody"></tbody>
+            </table>
+          </div>
+          <div class="muted outputs-hint">URL path is appended to <span id="origin-hint"></span>/ — no extension needed.</div>
+          <div class="modal-actions">
+            <button id="output-add">Add output</button>
+            <span class="spacer"></span>
+            <button id="outputs-save" class="primary">Save</button>
+          </div>
+        </div>
+
+        <div class="modal-tab-content hidden" data-mtab="layouts">
+          <div class="layouts-list" id="layouts-list"></div>
+        </div>
+
+        <div class="modal-tab-content hidden" data-mtab="resolume">
+          <div class="form-grid">
+            <label class="form-row toggle-row">
+              <input type="checkbox" id="resolume-enabled" />
+              <span>Send current lyric to Resolume via OSC</span>
+            </label>
+            <div class="form-row form-row-pair">
+              <label class="pair-cell">
+                <span class="form-label">Host</span>
+                <input type="text" id="resolume-host" placeholder="127.0.0.1" />
+              </label>
+              <label class="pair-cell">
+                <span class="form-label">Port</span>
+                <input type="number" id="resolume-port" min="1" max="65535" placeholder="7000" />
+              </label>
+            </div>
+          </div>
+
+          <h3 class="subhead">Clips</h3>
+          <div class="muted clips-hint">
+            Each clip sends the current lyric to one OSC address. Tick <em>Trigger clip</em>
+            to also fire <code>…/clips/N/connect</code> on every new line — useful when the
+            Text Block clip is on a layer that needs to be re-triggered to display.
+          </div>
+          <div class="clips-table-wrap">
+            <table class="clips-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>OSC address</th>
+                  <th class="trigger-col">Trigger clip</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="clips-tbody"></tbody>
+            </table>
+          </div>
+          <div class="modal-actions">
+            <button id="clip-add">Add clip</button>
+            <span class="spacer"></span>
+            <button id="resolume-save" class="primary">Save</button>
+          </div>
+        </div>
+
+        <div class="modal-tab-content hidden" data-mtab="network">
+          <div class="muted">
+            Send and receive OSC for show-control tools like Companion or QLab.
+            xLyrics can listen for triggers (clear, next, prev, home, sections),
+            and broadcast feedback (current/next line, song, section, frame, step)
+            to anywhere on your network.
+          </div>
+
+          <h3 class="subhead">Listen for OSC</h3>
+          <div class="form-grid">
+            <label class="form-row toggle-row">
+              <input type="checkbox" id="net-listen-enabled" />
+              <span>Listen for incoming OSC commands</span>
+            </label>
+            <label class="form-row">
+              <span class="form-label">Listen port</span>
+              <input type="number" id="net-listen-port" min="1" max="65535" placeholder="8000" />
+            </label>
+            <h4 class="form-subhead">Control addresses</h4>
+            <label class="form-row">
+              <span class="form-label">Clear</span>
+              <input type="text" id="net-ctrl-clear" placeholder="/xlyrics/clear" />
+            </label>
+            <label class="form-row">
+              <span class="form-label">Next</span>
+              <input type="text" id="net-ctrl-next" placeholder="/xlyrics/next" />
+            </label>
+            <label class="form-row">
+              <span class="form-label">Previous</span>
+              <input type="text" id="net-ctrl-prev" placeholder="/xlyrics/prev" />
+            </label>
+            <label class="form-row">
+              <span class="form-label">Home</span>
+              <input type="text" id="net-ctrl-home" placeholder="/xlyrics/home" />
+            </label>
+            <div class="muted">
+              Section jumps use the per-section OSC address from the Sections tab.
+              Companion press/release works automatically — release messages
+              (<code>0</code>) are ignored.
+            </div>
+          </div>
+
+          <h3 class="subhead">Send feedback</h3>
+          <div class="form-grid">
+            <label class="form-row toggle-row">
+              <input type="checkbox" id="net-fb-enabled" />
+              <span>Broadcast state changes via OSC</span>
+            </label>
+            <div class="form-row form-row-pair">
+              <label class="pair-cell">
+                <span class="form-label">Host</span>
+                <input type="text" id="net-fb-host" placeholder="127.0.0.1" />
+              </label>
+              <label class="pair-cell">
+                <span class="form-label">Port</span>
+                <input type="number" id="net-fb-port" min="1" max="65535" placeholder="9000" />
+              </label>
+            </div>
+            <label class="form-row">
+              <span class="form-label">Address prefix</span>
+              <input type="text" id="net-fb-prefix" placeholder="/xlyrics" />
+            </label>
+            <div class="muted">
+              xLyrics will send to <code>{prefix}/current</code>, <code>/next</code>,
+              <code>/section</code>, <code>/song</code>, <code>/frame</code> (int),
+              <code>/step</code> (int) and <code>/cleared</code> (int) on every change.
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="net-fb-test">Test feedback</button>
+            <span class="spacer"></span>
+            <button id="network-save" class="primary">Save</button>
+          </div>
+        </div>
+
+        <div class="modal-tab-content hidden" data-mtab="about">
+          <div class="about-tab">
+            <img id="about-logo" class="about-logo" src="/images/Full Dark Tsp.png" alt="xLyrics" />
+            <p class="about-tagline">
+              A lightweight, file-based lyrics presentation tool for live worship,
+              gigs, and stage shows. Songs live as plain <code>.txt</code> files
+              you can edit anywhere — xLyrics watches them and reloads on save.
+            </p>
+            <div class="about-meta">
+              <span id="about-version">v0.1.0</span>
+            </div>
+            <div class="about-links">
+              <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+              <a href="/layouts" target="_blank" rel="noopener">Layouts folder</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/control.js"></script>
+</body>
+</html>
