@@ -33,10 +33,10 @@ const DEFAULT_RESOLUME_ADDRESS =
 const DEFAULT_CONFIG = {
   sections: [
     { name: 'Chorus',      color: '#e06464', hotkey: 'a', osc: '' },
-    { name: 'Chorus 1',    color: '#e06464', hotkey: null, osc: '' },
-    { name: 'Chorus 2',    color: '#c95454', hotkey: null, osc: '' },
-    { name: 'Chorus 3',    color: '#b04545', hotkey: null, osc: '' },
-    { name: 'Chorus 4',    color: '#963838', hotkey: null, osc: '' },
+    { name: 'Chorus 1',    color: '#e06464', hotkey: 's', osc: '' },
+    { name: 'Chorus 2',    color: '#c95454', hotkey: 'd', osc: '' },
+    { name: 'Chorus 3',    color: '#b04545', hotkey: 'f', osc: '' },
+    { name: 'Chorus 4',    color: '#963838', hotkey: 'g', osc: '' },
     { name: 'Pre Chorus',  color: '#d8b848', hotkey: 'z', osc: '' },
     { name: 'Post Chorus', color: '#b58d2e', hotkey: 'x', osc: '' },
     { name: 'Verse 1',     color: '#5bb570', hotkey: 'q', osc: '' },

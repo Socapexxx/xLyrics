@@ -778,23 +778,57 @@ footer button:hover { background: var(--bg-hover); }
   color: var(--accent-soft);
 }
 
-/* Layouts tab */
-.layouts-list { display: flex; flex-direction: column; gap: 8px; }
-.layouts-list .layout-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle); border-radius: 4px;
+/* Layouts tab — grid of live previews */
+.layouts-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
 }
-.layouts-list .layout-item .layout-swatch {
-  width: 56px; height: 32px;
-  border: 1px solid var(--border);
-  border-radius: 3px; flex-shrink: 0;
-  background: #000;
+.layouts-list .layout-tile {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px; overflow: hidden;
+  background: var(--bg-elev-2);
+}
+.layouts-list .layout-preview {
+  position: relative;
+  width: 100%;
+  /* 16:9 box */
+  aspect-ratio: 16 / 9;
+  background: repeating-conic-gradient(#1a1a1a 0% 25%, #0f0f0f 0% 50%) 50% / 16px 16px;
+  overflow: hidden;
+}
+.layouts-list .layout-preview iframe {
+  position: absolute; top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  border: 0;
+  /* Will be overridden inline based on tile size, but defaults give a sensible look */
+  transform: scale(0.16667); /* ~ 320 / 1920 */
+  transform-origin: top left;
+  pointer-events: none;
+}
+/* Use a CSS container query / dynamic sizing trick: scale via the wrapper. */
+.layouts-list .layout-preview {
+  --preview-scale: 0.18;
+}
+.layouts-list .layout-preview iframe {
+  transform: scale(var(--preview-scale));
+}
+.layouts-list .layout-preview-error {
+  position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; color: #fff;
+  color: var(--text-muted); font-size: 12px;
 }
-.layouts-list .layout-item .layout-name { font-size: 13px; color: var(--text); flex: 1; }
-.layouts-list .layout-item .layout-file {
+.layouts-list .layout-meta {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.layouts-list .layout-name {
+  font-size: 13px; color: var(--text); text-transform: capitalize;
+}
+.layouts-list .layout-file {
   font-size: 11px; color: var(--text-muted);
   font-family: 'SF Mono', Menlo, monospace;
 }

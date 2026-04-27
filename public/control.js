@@ -313,12 +313,13 @@ function renderArrangement() {
 
   const activeArr = (playlistIndex >= 0 && localPlaylist[playlistIndex])
     ? localPlaylist[playlistIndex].arrIndex : -1;
+  let activeChip = null;
 
   localSequence.forEach((name, idx) => {
     const chip = document.createElement('div');
     chip.className = 'chip';
     applySectionColorStyle(chip, name);
-    if (idx === activeArr) chip.classList.add('active');
+    if (idx === activeArr) { chip.classList.add('active'); activeChip = chip; }
     chip.textContent = name;
     chip.draggable = true;
     chip.dataset.idx = String(idx);
@@ -373,6 +374,10 @@ function renderArrangement() {
   add.title = 'Add section';
   add.addEventListener('click', (e) => { e.stopPropagation(); openAddMenu(add); });
   arrangementChipsEl.appendChild(add);
+
+  if (activeChip) {
+    activeChip.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }
 }
 
 function removeArrangementAt(idx) {
@@ -517,6 +522,8 @@ function renderStructure() {
   structureList.innerHTML = '';
   if (!currentSong) return;
 
+  let activeTile = null;
+
   localSequence.forEach((name, arrIdx) => {
     const group = document.createElement('div');
     group.className = 'section-group';
@@ -535,7 +542,10 @@ function renderStructure() {
       const tile = document.createElement('div');
       tile.className = 'frame-tile';
       applySectionColorStyle(tile, name);
-      if (pIdx === playlistIndex) tile.classList.add('active');
+      if (pIdx === playlistIndex) {
+        tile.classList.add('active');
+        activeTile = tile;
+      }
 
       const num = document.createElement('span');
       num.className = 'frame-num';
@@ -554,6 +564,11 @@ function renderStructure() {
     group.appendChild(grid);
     structureList.appendChild(group);
   });
+
+  // Keep the active frame visible as we navigate.
+  if (activeTile) {
+    activeTile.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
 }
 
 /* ---------------- Playback ---------------- */
@@ -1062,9 +1077,7 @@ function applyTheme(theme) {
 const settingsModal = $('settings-modal');
 $('btn-settings').addEventListener('click', openSettings);
 $('settings-close').addEventListener('click', () => settingsModal.classList.add('hidden'));
-settingsModal.addEventListener('click', (e) => {
-  if (e.target === settingsModal) settingsModal.classList.add('hidden');
-});
+// Close only via the X button or Esc — no click-outside-to-close (would lose unsaved edits)
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !settingsModal.classList.contains('hidden')) {
     settingsModal.classList.add('hidden');
@@ -1311,6 +1324,32 @@ $('outputs-save').addEventListener('click', async () => {
 });
 
 /* ---- Layouts tab ---- */
+const PREVIEW_SAMPLE = {
+  current: 'When oceans rise\nMy soul will rest in Your embrace',
+  next: 'I will call upon Your Name',
+  section: 'Chorus',
+  song_title: 'Oceans',
+};
+
+function buildLayoutPreviewSrcdoc(layoutText) {
+  // Substitute template vars with literal sample text. Use \n line breaks —
+  // every layout sets `white-space: pre-line` so newlines render as breaks.
+  let body = layoutText;
+  for (const [key, val] of Object.entries(PREVIEW_SAMPLE)) {
+    const re = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    body = body.replace(re, `<span data-xl="${key}" style="opacity:1 !important">${val.replace(/\n/g, '&#10;')}</span>`);
+  }
+  // Strip any inline scripts — not safe (or useful) in a preview.
+  body = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank">
+<style>
+  html, body { margin: 0; padding: 0; }
+  /* Force any fading layouts to render visible in preview */
+  [data-xl] { opacity: 1 !important; transition: none !important; }
+</style>
+</head><body>${body}</body></html>`;
+}
+
 async function loadLayoutsTab() {
   const list = $('layouts-list');
   list.innerHTML = '';
@@ -1319,21 +1358,53 @@ async function loadLayoutsTab() {
     return;
   }
   for (const name of availableLayouts) {
-    const row = document.createElement('div');
-    row.className = 'layout-item';
-    const swatch = document.createElement('div');
-    swatch.className = 'layout-swatch';
-    swatch.textContent = 'Aa';
-    row.appendChild(swatch);
+    const tile = document.createElement('div');
+    tile.className = 'layout-tile';
+
+    const previewWrap = document.createElement('div');
+    previewWrap.className = 'layout-preview';
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.setAttribute('tabindex', '-1');
+    iframe.setAttribute('sandbox', 'allow-same-origin');
+    iframe.setAttribute('loading', 'lazy');
+    previewWrap.appendChild(iframe);
+    tile.appendChild(previewWrap);
+
+    const meta = document.createElement('div');
+    meta.className = 'layout-meta';
     const label = document.createElement('div');
     label.className = 'layout-name';
     label.textContent = name;
-    row.appendChild(label);
     const file = document.createElement('div');
     file.className = 'layout-file';
     file.textContent = name + '.xlayout';
-    row.appendChild(file);
-    list.appendChild(row);
+    meta.appendChild(label);
+    meta.appendChild(file);
+    tile.appendChild(meta);
+
+    list.appendChild(tile);
+
+    // Auto-scale the iframe to fit the preview wrapper width.
+    const updateScale = () => {
+      const w = previewWrap.clientWidth;
+      if (w > 0) previewWrap.style.setProperty('--preview-scale', String(w / 1920));
+    };
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(updateScale);
+      ro.observe(previewWrap);
+    } else {
+      window.addEventListener('resize', updateScale);
+    }
+    requestAnimationFrame(updateScale);
+
+    // Fetch the layout source and inject into the iframe.
+    fetch(`/layouts/${encodeURIComponent(name)}.xlayout`, { cache: 'no-store' })
+      .then((r) => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then((text) => { iframe.srcdoc = buildLayoutPreviewSrcdoc(text); })
+      .catch(() => {
+        previewWrap.innerHTML = '<div class="layout-preview-error">Preview unavailable</div>';
+      });
   }
 }
 
