@@ -25,6 +25,7 @@ const RESERVED_PATHS = new Set(['api', 'events', 'layouts', 'images', 'control',
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
+app.use(express.text({ limit: '1mb', type: 'text/plain' }));
 
 /* ---------------- Config ---------------- */
 const DEFAULT_RESOLUME_ADDRESS =
@@ -884,6 +885,41 @@ app.post('/api/display/clear', (req, res) => {
 app.post('/api/display/fade', (req, res) => {
   const ms = Math.max(0, Math.min(2000, Number(req.body && req.body.fadeMs) || 0));
   setDisplay({ fadeMs: ms });
+  res.json({ ok: true });
+});
+
+/* ---------------- API: layout source (editor) ---------------- */
+const LAYOUT_NAME_RE = /^[a-z0-9][a-z0-9 _\-]*$/i;
+
+app.get('/api/layout/:name/source', (req, res) => {
+  const name = req.params.name;
+  if (!LAYOUT_NAME_RE.test(name)) return res.status(400).json({ error: 'invalid name' });
+  const file = path.join(LAYOUTS_DIR, `${name}.xlayout`);
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'not found' });
+  res.type('text/plain').send(fs.readFileSync(file, 'utf8'));
+});
+
+app.put('/api/layout/:name/source', (req, res) => {
+  const name = req.params.name;
+  if (!LAYOUT_NAME_RE.test(name)) return res.status(400).json({ error: 'invalid name' });
+  const body = req.body;
+  if (typeof body !== 'string' && typeof body?.source !== 'string')
+    return res.status(400).json({ error: 'source string required' });
+  const source = typeof body === 'string' ? body : body.source;
+  const file = path.join(LAYOUTS_DIR, `${name}.xlayout`);
+  fs.writeFileSync(file, source, 'utf8');
+  broadcast('layout:updated', { name });
+  res.json({ ok: true });
+});
+
+
+app.delete('/api/layout/:name', (req, res) => {
+  const name = req.params.name;
+  if (!LAYOUT_NAME_RE.test(name)) return res.status(400).json({ error: 'invalid name' });
+  const file = path.join(LAYOUTS_DIR, `${name}.xlayout`);
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'not found' });
+  fs.unlinkSync(file);
+  broadcast('layout:updated', { name, deleted: true });
   res.json({ ok: true });
 });
 

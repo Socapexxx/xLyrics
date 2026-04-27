@@ -1,0 +1,442 @@
+/* =========================================================
+   xLyrics Layout Editor
+   ========================================================= */
+
+/* Re-use the same theme tokens as control.css */
+:root {
+  --bg-app:        #1a1a1a;
+  --bg-elevated:   #111111;
+  --bg-pane:       #161616;
+  --bg-elev-2:     #202020;
+  --bg-input:      #222222;
+  --bg-input-2:    #1e1e1e;
+  --bg-hover:      rgba(255,255,255,0.04);
+  --border:        #2a2a2a;
+  --border-strong: #333333;
+  --border-subtle: #242424;
+  --text:          #e6e6e6;
+  --text-2:        #cccccc;
+  --text-muted:    #888888;
+  --accent:        #3b5bdb;
+  --accent-hover:  #4b6be6;
+  --danger:        #ff8888;
+  --focus-ring:    0 0 0 2px rgba(75,107,230,0.55);
+}
+:root[data-theme="light"] {
+  --bg-app:        #f3f4f6;
+  --bg-elevated:   #ffffff;
+  --bg-pane:       #fafafa;
+  --bg-elev-2:     #efefef;
+  --bg-input:      #ffffff;
+  --bg-input-2:    #ffffff;
+  --bg-hover:      rgba(0,0,0,0.04);
+  --border:        #d0d0d0;
+  --border-strong: #c0c0c0;
+  --border-subtle: #e0e0e0;
+  --text:          #1a1a1a;
+  --text-2:        #333333;
+  --text-muted:    #777777;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  background: var(--bg-app);
+  color: var(--text);
+}
+
+/* ── Toolbar ──────────────────────────────────────────── */
+.le-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.le-toolbar-left, .le-toolbar-center, .le-toolbar-right {
+  display: flex; align-items: center; gap: 6px;
+}
+.le-toolbar-center { flex: 1; justify-content: center; }
+.le-toolbar-right  { justify-content: flex-end; }
+
+.le-logo { height: 22px; width: auto; object-fit: contain; }
+[data-theme="light"] .le-logo { content: url('/images/Text Light Tsp.png'); }
+
+.le-divider {
+  width: 1px; height: 22px;
+  background: var(--border-strong);
+  margin: 0 2px; flex-shrink: 0;
+}
+
+.le-toolbar button, .le-toolbar select, .le-toolbar a {
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.le-toolbar button:hover, .le-toolbar a:hover { background: var(--bg-hover); }
+.le-toolbar button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.le-toolbar button.primary:hover { background: var(--accent-hover); }
+.le-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+.le-toolbar select { padding: 4px 6px; min-width: 120px; }
+
+.le-add-el { font-size: 11px; padding: 4px 8px; }
+.le-status {
+  font-size: 11px; color: var(--text-muted);
+  min-width: 80px;
+}
+
+/* ── Workspace ────────────────────────────────────────── */
+.le-workspace {
+  display: flex;
+  height: calc(100vh - 44px);
+  overflow: hidden;
+}
+
+/* Canvas area */
+.le-canvas-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: repeating-conic-gradient(#111 0% 25%, #161616 0% 50%) 50% / 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.le-canvas-outer {
+  position: relative;
+  transform-origin: center center;
+  /* scale set via JS */
+}
+.le-canvas {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  /* background set per layout */
+}
+.le-canvas-info {
+  position: absolute;
+  bottom: 10px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: #aaa;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+/* ── Canvas elements ──────────────────────────────────── */
+.le-el {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  /* display style set per element */
+  display: flex;
+  flex-direction: column;
+}
+.le-el.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 0px;
+}
+.le-el-preview {
+  /* inner span showing sample text */
+  white-space: pre-line;
+  pointer-events: none;
+  width: 100%;
+}
+/* Resize handles */
+.le-handle {
+  position: absolute;
+  width: 10px; height: 10px;
+  background: var(--accent);
+  border: 2px solid #fff;
+  border-radius: 2px;
+  z-index: 10;
+}
+.le-handle[data-h="nw"] { top: -5px; left: -5px; cursor: nw-resize; }
+.le-handle[data-h="n"]  { top: -5px; left: calc(50% - 5px); cursor: n-resize; }
+.le-handle[data-h="ne"] { top: -5px; right: -5px; cursor: ne-resize; }
+.le-handle[data-h="e"]  { top: calc(50% - 5px); right: -5px; cursor: e-resize; }
+.le-handle[data-h="se"] { bottom: -5px; right: -5px; cursor: se-resize; }
+.le-handle[data-h="s"]  { bottom: -5px; left: calc(50% - 5px); cursor: s-resize; }
+.le-handle[data-h="sw"] { bottom: -5px; left: -5px; cursor: sw-resize; }
+.le-handle[data-h="w"]  { top: calc(50% - 5px); left: -5px; cursor: w-resize; }
+
+/* ── Properties sidebar ───────────────────────────────── */
+.le-props {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--bg-pane);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.le-props-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+.le-props-section {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.le-props-section.hidden { display: none; }
+
+.le-props-heading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.le-prop-group {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.le-prop-group:last-child { border-bottom: none; }
+.le-prop-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.le-prop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+}
+.le-prop-row > span:first-child {
+  flex: 0 0 80px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.le-prop-row input[type="text"],
+.le-prop-row input[type="number"],
+.le-prop-row select,
+.le-prop-row textarea {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.le-prop-row input:focus, .le-prop-row select:focus, .le-prop-row textarea:focus {
+  outline: none;
+  border-color: var(--accent-hover);
+  box-shadow: var(--focus-ring);
+}
+.le-prop-row textarea {
+  resize: vertical; font-family: inherit;
+}
+
+.le-small-num { flex: 0 0 52px !important; }
+.le-hex-input { flex: 0 0 80px !important; font-family: 'SF Mono', monospace; font-size: 11px !important; }
+.le-unit { flex-shrink: 0; font-size: 11px; color: var(--text-muted); }
+
+.le-color-row {
+  display: flex; align-items: center; gap: 6px; flex: 1;
+}
+.le-color-row input[type="color"] {
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 2px;
+  background: var(--bg-input);
+  cursor: pointer;
+}
+.le-color-row input[type="range"] {
+  flex: 1; accent-color: var(--accent);
+}
+
+.le-four-col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.le-four-col label {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 10px; color: var(--text-muted);
+}
+.le-four-col label input, .le-four-col label select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 3px 4px;
+  font-size: 11px;
+}
+
+.le-slider-row { gap: 8px; }
+.le-slider-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+.le-btn-group {
+  display: flex; gap: 2px; flex: 1;
+}
+.le-btn-group button {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  padding: 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.le-btn-group button:hover { background: var(--bg-hover); }
+.le-btn-group button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.le-presets-row .le-presets {
+  display: flex; gap: 4px; flex: 1;
+}
+.le-presets button {
+  flex: 1; padding: 4px;
+  font-size: 11px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.le-presets button:hover { border-color: var(--accent); }
+
+.le-checkbox-label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: var(--text-2);
+  cursor: pointer;
+  flex-direction: row !important;
+}
+.le-checkbox-label input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.le-shadow-fields { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Code panel ───────────────────────────────────────── */
+.le-code-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 260px;
+  height: 200px;
+  background: #0d0d0d;
+  border-top: 1px solid var(--border-strong);
+  display: flex; flex-direction: column;
+  z-index: 100;
+}
+.le-code-panel.hidden { display: none; }
+.le-code-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: #111;
+  font-size: 11px; color: var(--text-muted);
+}
+.le-code-header button {
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.le-code-header button:last-child {
+  margin-left: auto; font-size: 15px;
+  background: none; border: none;
+}
+.le-code-pre {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 16px;
+  font-family: 'SF Mono', Menlo, 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #d4d4d4;
+  white-space: pre;
+}
+
+/* ── Name dialog ──────────────────────────────────────── */
+.le-dialog-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.le-dialog-overlay.hidden { display: none; }
+.le-dialog {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 24px;
+  width: 320px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.le-dialog h3 { font-size: 15px; }
+.le-dialog label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 12px; color: var(--text-2);
+}
+.le-dialog input[type="text"] {
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.le-dialog-actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+.le-dialog-actions button {
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.le-dialog-actions button.primary {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}
